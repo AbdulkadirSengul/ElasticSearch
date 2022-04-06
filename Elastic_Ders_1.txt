@@ -1,0 +1,217 @@
+POST = Yeni bir kayıt eklemek istediğimizde kullanırız.
+GET = İçerde olan bir kaydı görüntülemek istediğimizde kullanırız.
+PUT= Güncellemek istediğimizde kullanırız.
+DELETE = Silmek istediğimizde kullanırız.
+
+
+--YENİ BİR KAYIT EKLEDİK
+POST /inspections/_doc
+{"buisness_adress" : "1258 Sacramento St.",
+"business_city" : "San Francisco"
+}
+
+----
+POST /inspections/_doc
+{"buisness_adress" : "1258 Sacramento St.","business_city" : "San Francisco","business_location": {
+  "type":"Point",
+  "coordinates":[35.69834,27.45667]
+  },
+  "business_postal_code":"35530"
+}
+
+--EKLEDİĞİMİZ KAYITI EKRANDA GÖSTERDİK
+GET /inspections/_search
+
+---
+
+POST /inspections/_doc
+{
+  "business_address": "660 Sacramento St",
+  "business_city": "San Francisco",
+  "business_id": "2228",
+  "business_latitude": "37.793698",
+  "business_location": {
+    "type": "Point",
+    "coordinates": [
+      -122.403984,
+      37.793698
+    ]
+  },
+  "business_longitude": "-122.403984",
+  "business_name": "Tokyo Express",
+  "business_postal_code": "94111",
+  "business_state": "CA",
+  "inspection_date": "2016-02-04T00:00:00.000",
+  "inspection_id": "2228_20160204",
+  "inspection_type": "Routine",
+  "inspection_score": 96,
+  "risk_category": "Low Risk",
+  "violation_description": "Unclean nonfood contact surfaces",
+  "violation_id": "2228_20160204_103142"
+}
+--Üstteki kodun bazı bilgilerini değiştirerek güncelleme yaptık.
+--en sağdaki id post ederken ki verilen iddir.
+PUT /inspections/_doc/P2J29H8BPaqi8XYqRVYj
+{
+  "business_address": "Bilecik",
+  "business_city": "San Francisco",
+  "business_id": "2228",
+  "business_latitude": "37.793698",
+  "business_location": {
+    "type": "Point",
+    "coordinates": [
+      -122.403984,
+      37.793698
+    ]
+  },
+  "business_longitude": "-122.403984",
+  "business_name": "Tokyo Express",
+  "business_postal_code": "94111",
+  "business_state": "CA",
+  "inspection_date": "2016-02-04T00:00:00.000",
+  "inspection_id": "2228_20160204",
+  "inspection_type": "Routine",
+  "inspection_score": 96,
+  "risk_category": "Low Risk",
+  "violation_description": "Unclean nonfood contact surfaces",
+  "violation_id": "2228_20160204_103142"
+}
+
+
+---burada arama işlemi yaptık. city de san geçenleri ekrana yazdırdık
+GET /inspections/_search
+{
+  "query": {
+    "match": {
+      "business_city": "San"
+    }
+  }
+}
+
+--match ile match_phrase ile farkı phrase iki kelimeilik bir şey aradığımızda
+--match_phrase daha iyi olur. skor bazlı sıralama ile getirir.
+GET /inspections/_search
+{
+  "query": {
+    "match_phrase": {
+      "buisness_adress": "Sacramento"
+    }
+  }
+}
+
+----içerisinde ikisini de aynı anda sağlayanları ekrana getirir.
+GET /inspections/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "business_city": "San"
+          }
+        },
+        {
+          "match_phrase": {
+            "buisness_adress": "sacramento St."
+          }
+        }
+      ]
+    }
+  }
+}
+
+---- içerisinde x olanı getirmeme durumu
+GET /inspections/_search
+{
+  "query": {
+    "bool": {
+      "must_not": [
+        {
+          "match": {
+            "buisness_adress": "st."
+          }
+        }
+      ]
+    }
+  }
+}
+
+---Or gibi çalışır. Herhangi bir x durumunu sağlıyorsa ekrana bastırırız.
+GET /inspections/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match_phrase": {
+            "business_address":{
+              "query": "Bilecik"
+            }
+          }
+        },
+        {
+          "match_phrase": {
+            "business_city": {
+              "query": "san"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+---- highlight işlemi yapıldı. anlamadım pek.
+GET /inspections/_search
+{
+  "query":{
+    "match": {
+      "business_city": "San"
+    }
+  },
+  "highlight": {
+    "fields": {
+      "business_city": {}
+    }
+  }
+}
+
+---gte = büyük eşittir
+---lte = küçük eşittir
+
+----- integer işlem yaptık. x'i 80 den büyük ve eşit olanları getir dedik.
+GET /inspections/_search
+{
+  "query": {
+    "range": {
+      "inspection_score": {
+        "gte": 80
+      }
+    }
+  }
+}
+
+---- üstte yapılan işlemi sıraladık
+GET /inspections/_search
+{
+  "query": {
+    "range": {
+      "inspection_score": {
+        "gte": 80
+      }
+    }
+  },
+  "sort": [
+    {
+      "inspection_score": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+--sorguları sql formatında da gönderebiliriz.
+POST /_sql?format=txt
+{"query": """
+SELECT business_name,inspection_score from inspections order by inspection_score asc 
+"""}
